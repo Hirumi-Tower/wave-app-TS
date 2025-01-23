@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Wave synthesis",
+  title: "Wave synthesis pazzle",
   description: "wave synthesis puzzle game by next.js",
 };
 
