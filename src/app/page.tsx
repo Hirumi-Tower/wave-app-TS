@@ -1,100 +1,181 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
+
+type Difficulty = 'hard' | 'veryhard' | 'impossible';
+
+export default function WavePuzzle() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
+  const [wave1, setWave1] = useState<number>(50);
+  const [wave2, setWave2] = useState<number>(50);
+  const [wave3, setWave3] = useState<number>(50);
+  const [currentTarget, setCurrentTarget] = useState<number>(0);
+  const [isCleared, setIsCleared] = useState<boolean>(false);
+  const [timeLeft, setTimeLeft] = useState<number>(300);
+  const [targets, setTargets] = useState<number[][]>([]);
+
+  const snapStep: Record<Difficulty, number> = {
+    hard: 10,
+    veryhard: 5,
+    impossible: 1,
+  };
+
+  const generateTargets = (difficulty: Difficulty): number[][] => {
+    const step = snapStep[difficulty];
+    return Array.from({ length: 3 }, () =>
+      Array.from({ length: 3 }, () => Math.floor(Math.random() * (100 / step)) * step)
+    );
+  };
+
+  const drawWave = (ctx: CanvasRenderingContext2D, amplitudes: number[], color: string): void => {
+    ctx.beginPath();
+    for (let x = 0; x <= 600; x++) {
+      const t = (x / 600) * 2 * Math.PI;
+      const y =
+        amplitudes.reduce((sum, amp, i) => sum + amp * Math.sin((i + 1) * t), 0) / 3;
+      ctx.lineTo(x, 100 - y);
+    }
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  };
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, 600, 200);
+        if (targets[currentTarget]) {
+          drawWave(ctx, targets[currentTarget], '#00ff00'); // 緑
+        }
+        drawWave(ctx, [wave1, wave2, wave3], '#ffffff'); // 白
+      }
+    }
+  }, [wave1, wave2, wave3, targets, currentTarget]);
+
+  useEffect(() => {
+    if (timeLeft > 0 && !isCleared) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [timeLeft, isCleared]);
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLInputElement>) => {
+    e.preventDefault();
+  };
+
+  const handleSliderChange = (
+    e: ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<number>>
+  ) => {
+    setter(Number(e.target.value));
+  };
+
+  const checkMatch = (): void => {
+    const tolerance = difficulty === 'impossible' ? 1 : snapStep[difficulty!];
+    const isMatch = targets[currentTarget].every(
+      (target, i) => Math.abs(target - [wave1, wave2, wave3][i]) <= tolerance
+    );
+    if (isMatch) {
+      if (currentTarget + 1 < targets.length) {
+        setCurrentTarget(currentTarget + 1);
+      } else {
+        setIsCleared(true);
+      }
+    } else {
+      alert('Not quite right. Try again!');
+    }
+  };
+
+  const resetGame = (): void => {
+    setWave1(50);
+    setWave2(50);
+    setWave3(50);
+    setCurrentTarget(0);
+    setIsCleared(false);
+    setTimeLeft(300);
+  };
+
+  const startGame = (selectedDifficulty: Difficulty): void => {
+    setDifficulty(selectedDifficulty);
+    setTargets(generateTargets(selectedDifficulty));
+    resetGame();
+  };
+
+  if (!difficulty) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-green-500 font-mono">
+        <h1 className="text-3xl mb-6">[ Wave Puzzle - Select Difficulty ]</h1>
+        {(['hard', 'veryhard', 'impossible'] as Difficulty[]).map((level) => (
+          <button
+            key={level}
+            onClick={() => startGame(level)}
+            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg shadow-md m-2"
+          >
+            {level.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black text-green-500 font-mono">
+      <h1 className="text-2xl mb-4">[ Wave Synthesis Puzzle ]</h1>
+      {isCleared ? (
+        <div className="text-center">
+          <h2 className="text-2xl">You cleared all levels! 🎉</h2>
+          <p className="mt-4">Final Score: {timeLeft}</p>
+          <button
+            onClick={() => setDifficulty(null)}
+            className="mt-6 px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Retry
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      ) : (
+        <>
+          <div className="mb-4">Time Left: {300 - timeLeft}s</div>
+          <canvas
+            ref={canvasRef}
+            width="600"
+            height="200"
+            className="border-2 border-green-500 bg-black mb-4"
+          ></canvas>
+          <div className="w-full max-w-md space-y-2">
+            {[wave1, wave2, wave3].map((wave, index) => (
+              <div key={index}>
+                <label htmlFor={`wave${index + 1}`}>{`Wave ${index + 1} Amplitude`}</label>
+                <input
+                  id={`wave${index + 1}`}
+                  type="range"
+                  min="0"
+                  max="100"
+                  step={snapStep[difficulty!]}
+                  value={wave}
+                  onChange={(e) =>
+                    handleSliderChange(e, [setWave1, setWave2, setWave3][index])
+                  }
+                  onTouchMove={handleTouchMove}
+                  className="w-full bg-black text-green-500"
+                />
+                <p>{wave}</p>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={checkMatch}
+            className="mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg"
+          >
+            Check Match
+          </button>
+        </>
+      )}
+      <footer className="fixed bottom-0 w-full text-center py-2 text-green-700">
+        Original code by <a href="https://github.com/Hirumi-Tower" className="underline">Hirumi-Tower</a>
       </footer>
     </div>
   );
