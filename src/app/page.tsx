@@ -21,6 +21,8 @@ export default function WavePuzzle() {
     impossible: 1,
   };
 
+  const isMobile = (): boolean => window.innerWidth <= 768;
+
   const generateTargets = (difficulty: Difficulty): number[][] => {
     const step = snapStep[difficulty];
     return Array.from({ length: 3 }, () =>
@@ -30,8 +32,9 @@ export default function WavePuzzle() {
 
   const drawWave = (ctx: CanvasRenderingContext2D, amplitudes: number[], color: string): void => {
     ctx.beginPath();
-    for (let x = 0; x <= 600; x++) {
-      const t = (x / 600) * 2 * Math.PI;
+    const width = isMobile() ? canvasRef.current!.width : 600;
+    for (let x = 0; x <= width; x++) {
+      const t = (x / width) * 2 * Math.PI;
       const y =
         amplitudes.reduce((sum, amp, i) => sum + amp * Math.sin((i + 1) * t), 0) / 3;
       ctx.lineTo(x, 100 - y);
@@ -45,7 +48,9 @@ export default function WavePuzzle() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.clearRect(0, 0, 600, 200);
+        canvas.width = isMobile() ? window.innerWidth * 0.9 : 600;
+        canvas.height = 200;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (targets[currentTarget]) {
           drawWave(ctx, targets[currentTarget], '#00ff00'); // 緑
         }
@@ -107,24 +112,26 @@ export default function WavePuzzle() {
 
   if (!difficulty) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-green-500 font-mono">
-        <h1 className="text-3xl mb-6">[ Wave Puzzle - Select Difficulty ]</h1>
-        {(['hard', 'veryhard', 'impossible'] as Difficulty[]).map((level) => (
-          <button
-            key={level}
-            onClick={() => startGame(level)}
-            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg shadow-md m-2"
-          >
-            {level.toUpperCase()}
-          </button>
-        ))}
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-green-500 font-mono px-4">
+        <h1 className="text-3xl mb-6 text-center">[ Wave Puzzle - Select Difficulty ]</h1>
+        <div className="flex flex-col space-y-4 w-full max-w-sm">
+          {(['hard', 'veryhard', 'impossible'] as Difficulty[]).map((level) => (
+            <button
+              key={level}
+              onClick={() => startGame(level)}
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg"
+            >
+              {level.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-black text-green-500 font-mono">
-      <h1 className="text-2xl mb-4">[ Wave Synthesis Puzzle ]</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black text-green-500 font-mono px-4">
+      <h1 className="text-2xl mb-4 text-center">[ Wave Synthesis Puzzle ]</h1>
       {isCleared ? (
         <div className="text-center">
           <h2 className="text-2xl">You cleared all levels! 🎉</h2>
@@ -138,17 +145,15 @@ export default function WavePuzzle() {
         </div>
       ) : (
         <>
-          <div className="mb-4">Time Left: {300 - timeLeft}s</div>
+          <div className="mb-4 text-center">Time Left: {300 - timeLeft}s</div>
           <canvas
             ref={canvasRef}
-            width="600"
-            height="200"
-            className="border-2 border-green-500 bg-black mb-4"
+            className="border-2 border-green-500 bg-black rounded-md mb-4"
           ></canvas>
-          <div className="w-full max-w-md space-y-2">
+          <div className="flex flex-col space-y-4 w-full max-w-sm">
             {[wave1, wave2, wave3].map((wave, index) => (
               <div key={index}>
-                <label htmlFor={`wave${index + 1}`}>{`Wave ${index + 1} Amplitude`}</label>
+                <label htmlFor={`wave${index + 1}`} className="block text-sm mb-2 text-center">{`Wave ${index + 1} Amplitude`}</label>
                 <input
                   id={`wave${index + 1}`}
                   type="range"
@@ -160,15 +165,15 @@ export default function WavePuzzle() {
                     handleSliderChange(e, [setWave1, setWave2, setWave3][index])
                   }
                   onTouchMove={handleTouchMove}
-                  className="w-full bg-black text-green-500"
+                  className="w-full bg-gray-800"
                 />
-                <p>{wave}</p>
+                <p className="text-center mt-1">{wave}</p>
               </div>
             ))}
           </div>
           <button
             onClick={checkMatch}
-            className="mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg"
+            className="mt-6 px-4 py-2 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg"
           >
             Check Match
           </button>
