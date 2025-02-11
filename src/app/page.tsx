@@ -180,7 +180,7 @@ export default function WavePuzzle() {
         </>
       )}
       <footer className="fixed bottom-0 w-full text-center py-2 text-green-700">
-        Original code by <a href="https://github.com/Hirumi-Tower" className="underline">Hirumi-Tower</a>
+        Original code by <a href="https://github.com/Hirumiya-Tower" className="underline">Hirumiya-Tower</a>
       </footer>
     </div>
   );
